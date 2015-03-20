@@ -46,7 +46,7 @@ $ wp taxonomy-terms list > my-taxonomy-terms-file.csv
 
 There are a few different options available when running the command, most of which correspond to the [`get_terms()` WordPress function](http://codex.wordpress.org/Function_Reference/get_terms), which is what does the heavy lifting in this command.
 
-### -- ancestors
+### --ancestors
 
 Includes an additional column in the table, listing all the ancestors of a hierarchal taxonomy term.
 
@@ -68,6 +68,34 @@ Will produce:
 | 2  | category | Top Category    | top-category    | 0       |                                                 |
 | 1  | category | Uncategorized   | uncategorized   | 1       |                                                 |
 +----+----------+-----------------+-----------------+---------+-------------------------------------------------+
+
+Success: 5 terms found.
+```
+
+### --full-path
+
+Generate the full ancestral path of slugs for hierarchal taxonomy terms. Using this option will automatically enable the `--ancestors` flag.
+
+> **Note:** Chances are you won't need this flag, but it's useful if you need a slug-based hierarchal mapping of taxonomy terms.
+
+#### Example
+
+```bash
+$ wp taxonomy-terms list --full-path
+```
+
+Will produce:
+
+```
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+-------------------------------------------------------------+
+| ID | Taxonomy | Name            | Slug            | # Posts | Term Parents                                    | Full path                                                   |
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+-------------------------------------------------------------+
+| 5  | category | Fourth Category | fourth-category | 0       | Top Category › Second Category › Third Category | top-category/second-category/third-category/fourth-category |
+| 3  | category | Second Category | second-category | 0       | Top Category                                    | top-category/second-category                                |
+| 4  | category | Third Category  | third-category  | 0       | Top Category › Second Category                  | top-category/second-category/third-category                 |
+| 2  | category | Top Category    | top-category    | 0       |                                                 | top-category                                                |
+| 1  | category | Uncategorized   | uncategorized   | 1       |                                                 | uncategorized                                               |
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+-------------------------------------------------------------+
 
 Success: 5 terms found.
 ```

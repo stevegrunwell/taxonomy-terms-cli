@@ -28,6 +28,9 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 * [--ancestors]
 	 * : Include the ancestors of a hierarchal taxonomy term.
 	 *
+	 * [--full-path]
+	 * : Generate the full ancestral path to a term. Will automatically enable --ancestors flag.
+	 *
 	 * [--order=<asc|desc>]
 	 * : The direction to order results, either ASC or DESC. Default is ASC.
 	 *
@@ -42,7 +45,7 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 *   wp taxonomy-terms list --taxonomy=post_tag
 	 *   wp taxonomy-terms list --taxonomy=category,post_tag
 	 *
-	 * @synopsis [--ancestors] [--order=<asc|desc>] [--orderby=<id|count|name|slug>] [--taxonomy=<taxonomy>]
+	 * @synopsis [--ancestors] [--full-path] [--order=<asc|desc>] [--orderby=<id|count|name|slug>] [--taxonomy=<taxonomy>]
 	 * @subcommand list
 	 */
 	public function term_list( $args, $assoc_args ) {
@@ -63,8 +66,8 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 
 		} else {
 
-			if ( isset( $assoc_args['ancestors'] ) ) {
-				$terms = $this->get_ancestors( $terms );
+			if ( isset( $assoc_args['ancestors'] ) || isset( $assoc_args['full-path'] ) ) {
+				$terms = $this->get_ancestors( $terms, isset( $assoc_args['full-path'] ) );
 			}
 
 			$this->print_table( $terms );
@@ -80,24 +83,35 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 * Filter through the given $terms and retrieve the names of a hierarchal term's parents.
 	 *
 	 * @param array $terms The terms retrieved by get_terms().
+	 * @param bool  $path  Optional. Include the ancestral path in the output? Default is false.
 	 * @return array The same $terms array with an additional 'ancestors' property added to each of
 	 *               the taxonomy terms.
 	 */
-	protected function get_ancestors( $terms ) {
-		$parent_lookup = wp_list_pluck( $terms, 'name', 'term_id' );
+	protected function get_ancestors( $terms, $path = false ) {
+		$parent_lookup = array();
+
+		// This could be more efficient, but get the terms keyed by the term ID
+		foreach ( $terms as $term ) {
+			$parent_lookup[ $term->term_id ] = $term;
+		}
 
 		foreach ( $terms as $term_key => $term ) {
 			$ancestors = get_ancestors( $term->term_id, $term->taxonomy );
 			$ancestors = array_reverse( $ancestors );
 			$term_ancestors = array();
+			$term_path = array();
 
 			foreach ( $ancestors as $ancestor_id ) {
-				$term_ancestors[ $ancestor_id ] = isset( $parent_lookup[ $ancestor_id ] ) ?
-					$parent_lookup[ $ancestor_id ]
-					: _x( '(missing)', 'unable to find parent term name', 'taxonomy-terms-cli' );
+				if ( isset( $parent_lookup[ $ancestor_id ] ) ) {
+					$term_ancestors[] = $parent_lookup[ $ancestor_id ]->name;
+					$term_path[] = $parent_lookup[ $ancestor_id ]->slug;
+				}
 			}
 
 			$terms[ $term_key ]->ancestors = $term_ancestors;
+			if ( $path ) {
+				$terms[ $term_key ]->ancestral_path = $term_path;
+			}
 		}
 
 		return $terms;
@@ -150,6 +164,7 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 		$table = new \cli\Table();
 		$first_row = current( $results );
 		$ancestors = property_exists( $first_row, 'ancestors' ) && is_array( $first_row->ancestors );
+		$ancestral_path = property_exists( $first_row, 'ancestral_path' ) && is_array( $first_row->ancestral_path );
 
 		// Set the table headers
 		$headers = array(
@@ -162,6 +177,10 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 
 		if ( $ancestors ) {
 			$headers['ancestors'] = _x( 'Term Parents', 'parents of a hierarchal term', 'taxonomy-terms-cli' );
+		}
+
+		if ( $ancestral_path ) {
+			$headers['ancestral_path'] = _x( 'Full path', 'slugs for all ancestors of the term', 'taxonomy-terms-cli' );
 		}
 
 		$table->setHeaders( $headers );
@@ -181,6 +200,12 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 					_x( ' › ', 'ancestral separator', 'taxonomy-terms-cli' ),
 					$result->ancestors
 				);
+			}
+
+			if ( $ancestral_path ) {
+				$row['ancestral_path'] = empty( $result->ancestral_path ) ?
+					$result->slug
+					:	trailingslashit( implode( '/', $result->ancestral_path ) ) . $result->slug;
 			}
 
 			$table->addRow( $row );
