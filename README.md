@@ -46,6 +46,31 @@ $ wp taxonomy-terms list > my-taxonomy-terms-file.csv
 
 There are a few different options available when running the command, most of which correspond to the [`get_terms()` WordPress function](http://codex.wordpress.org/Function_Reference/get_terms), which is what does the heavy lifting in this command.
 
+### -- ancestors
+
+Includes an additional column in the table, listing all the ancestors of a hierarchal taxonomy term.
+
+#### Example
+
+```bash
+$ wp taxonomy-terms list --ancestors
+```
+
+Will produce:
+
+```
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+
+| ID | Taxonomy | Name            | Slug            | # Posts | Term Parents                                    |
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+
+| 5  | category | Fourth Category | fourth-category | 0       | Top Category › Second Category › Third Category |
+| 3  | category | Second Category | second-category | 0       | Top Category                                    |
+| 4  | category | Third Category  | third-category  | 0       | Top Category › Second Category                  |
+| 2  | category | Top Category    | top-category    | 0       |                                                 |
+| 1  | category | Uncategorized   | uncategorized   | 1       |                                                 |
++----+----------+-----------------+-----------------+---------+-------------------------------------------------+
+
+Success: 5 terms found.
+```
 
 ### --order
 

@@ -25,6 +25,9 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
+	 * [--ancestors]
+	 * : Include the ancestors of a hierarchal taxonomy term.
+	 *
 	 * [--order=<asc|desc>]
 	 * : The direction to order results, either ASC or DESC. Default is ASC.
 	 *
@@ -39,7 +42,7 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 *   wp taxonomy-terms list --taxonomy=post_tag
 	 *   wp taxonomy-terms list --taxonomy=category,post_tag
 	 *
-	 * @synopsis [--order=<asc|desc>] [--orderby=<id|count|name|slug>] [--taxonomy=<taxonomy>]
+	 * @synopsis [--ancestors] [--order=<asc|desc>] [--orderby=<id|count|name|slug>] [--taxonomy=<taxonomy>]
 	 * @subcommand list
 	 */
 	public function term_list( $args, $assoc_args ) {
@@ -59,6 +62,11 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 			WP_CLI::error( __( 'No taxonomy terms were found!', 'taxonomy-terms-cli' ) );
 
 		} else {
+
+			if ( isset( $assoc_args['ancestors'] ) ) {
+				$terms = $this->get_ancestors( $terms );
+			}
+
 			$this->print_table( $terms );
 			WP_CLI::line();
 			WP_CLI::success( sprintf(
@@ -66,6 +74,33 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 				count( $terms )
 			) );
 		}
+	}
+
+	/**
+	 * Filter through the given $terms and retrieve the names of a hierarchal term's parents.
+	 *
+	 * @param array $terms The terms retrieved by get_terms().
+	 * @return array The same $terms array with an additional 'ancestors' property added to each of
+	 *               the taxonomy terms.
+	 */
+	protected function get_ancestors( $terms ) {
+		$parent_lookup = wp_list_pluck( $terms, 'name', 'term_id' );
+
+		foreach ( $terms as $term_key => $term ) {
+			$ancestors = get_ancestors( $term->term_id, $term->taxonomy );
+			$ancestors = array_reverse( $ancestors );
+			$term_ancestors = array();
+
+			foreach ( $ancestors as $ancestor_id ) {
+				$term_ancestors[ $ancestor_id ] = isset( $parent_lookup[ $ancestor_id ] ) ?
+					$parent_lookup[ $ancestor_id ]
+					: _x( '(missing)', 'unable to find parent term name', 'taxonomy-terms-cli' );
+			}
+
+			$terms[ $term_key ]->ancestors = $term_ancestors;
+		}
+
+		return $terms;
 	}
 
 	/**
@@ -113,25 +148,42 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 */
 	protected function print_table( $results ) {
 		$table = new \cli\Table();
+		$first_row = current( $results );
+		$ancestors = property_exists( $first_row, 'ancestors' ) && is_array( $first_row->ancestors );
 
 		// Set the table headers
-		$table->setHeaders( array(
+		$headers = array(
 			'term_id'  => _x( 'ID', 'the taxonomy term ID', 'taxonomy-terms-cli' ),
 			'taxonomy' => _x( 'Taxonomy', 'the taxonomy this term belongs to', 'taxonomy-terms-cli' ),
 			'name'     => _x( 'Name', 'the taxonomy term title', 'taxonomy-terms-cli' ),
 			'slug'     => _x( 'Slug', 'the taxonomy term slug', 'taxonomy-terms-cli' ),
 			'count'    => _x( '# Posts', 'number of posts assigned to this term', 'taxonomy-terms-cli' )
-		) );
+		);
+
+		if ( $ancestors ) {
+			$headers['ancestors'] = _x( 'Term Parents', 'parents of a hierarchal term', 'taxonomy-terms-cli' );
+		}
+
+		$table->setHeaders( $headers );
 
 		// Set content
 		foreach ( $results as $result ) {
-			$table->addRow( array(
+			$row = array(
 				'term_id'  => $result->term_id,
 				'taxonomy' => $result->taxonomy,
 				'name'     => $result->name,
 				'slug'     => $result->slug,
 				'count'    => $result->count,
-			) );
+			);
+
+			if ( $ancestors ) {
+				$row['ancestors'] = implode(
+					_x( ' › ', 'ancestral separator', 'taxonomy-terms-cli' ),
+					$result->ancestors
+				);
+			}
+
+			$table->addRow( $row );
 		}
 
 		$table->display();
