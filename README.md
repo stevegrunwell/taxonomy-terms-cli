@@ -31,6 +31,17 @@ Success: One term found.
 ```
 
 
+### Saving results to a CSV
+
+Fortunately, the [PHP CLI Tools library](https://github.com/wp-cli/php-cli-tools) maintained by the WP-CLI team (and is used for the table output in this plugin) automatically detects if a table output is being [piped](http://ryanstutorials.net/linuxtutorial/piping.php) to another program and, if so, the table is rendered as tab-separated rows instead.
+
+To save a list of taxonomy terms to file, simply do the following:
+
+```bash
+$ wp taxonomy-terms list > my-taxonomy-terms-file.csv
+```
+
+
 ## Options
 
 There are a few different options available when running the command, most of which correspond to the [`get_terms()` WordPress function](http://codex.wordpress.org/Function_Reference/get_terms), which is what does the heavy lifting in this command.
