@@ -25,6 +25,12 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
+	 * [--order=<asc|desc>]
+	 * : The direction to order results, either ASC or DESC. Default is ASC.
+	 *
+	 * [--orderby=<id|count|name|slug>]
+	 * : The field to order results by (id, count, name, or slug). Default is "name".
+	 *
 	 * [--taxonomy=<taxonomy>]
 	 * : The taxonomies to retrieve terms for. Separate multiple values with a comma.
 	 *
@@ -33,18 +39,28 @@ class Taxonomy_Terms_CLI extends WP_CLI_Command {
 	 *   wp taxonomy-terms list --taxonomy=post_tag
 	 *   wp taxonomy-terms list --taxonomy=category,post_tag
 	 *
-	 * @synopsis [--taxonomy=<taxonomy>]
+	 * @synopsis [--order=<asc|desc>] [--orderby=<id|count|name|slug>] [--taxonomy=<taxonomy>]
 	 * @subcommand list
 	 */
 	public function term_list( $args, $assoc_args ) {
 		$taxonomies = isset( $assoc_args['taxonomy'] ) ? $assoc_args['taxonomy'] : null;
-		$term_args = array();
+		$term_args = array(
+			'order'   => isset( $assoc_args['order'] ) && 'desc' === strtolower( $assoc_args['order'] ) ? 'desc' : 'asc',
+		);
+
+		$orderby_options = array( 'id', 'count', 'name', 'slug' );
+		if ( isset( $assoc_args['orderby'] ) ) {
+			$orderby = strtolower( $assoc_args['orderby'] );
+			$term_args['orderby'] = in_array( $orderby, $orderby_options ) ? $orderby : 'name';
+		}
 
 		$terms = $this->get_terms( $taxonomies, $term_args );
 		if ( empty( $terms ) ) {
 			WP_CLI::error( __( 'No taxonomy terms were found!', 'taxonomy-terms-cli' ) );
 
 		} else {
+			$this->print_table( $terms );
+			WP_CLI::line();
 			WP_CLI::success( sprintf(
 				_n( 'One term found.', '%d terms found.', count( $terms ), 'taxonomy-terms-cli' ),
 				count( $terms )

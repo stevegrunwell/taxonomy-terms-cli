@@ -2,11 +2,13 @@
 
 A [WP-CLI](http://wp-cli.org/) command to retrieve information about taxonomy terms in your WordPress installation.
 
+
 ## Installation
 
 The command doubles as a WordPress plugin, so installing it is as simple as putting this repo in your WordPress plugins directory and activating the plugin. You may also include the taxonomy-terms-cli.php file directly from your theme or another plugin.
 
 For instructions on installing WP-CLI, please [see that project's website](http://wp-cli.org/).
+
 
 ## Basic usage
 
@@ -28,11 +30,30 @@ WP-CLI will print a nicely-formatted table, that will look something like this:
 Success: One term found.
 ```
 
+
 ## Options
 
 There are a few different options available when running the command, most of which correspond to the [`get_terms()` WordPress function](http://codex.wordpress.org/Function_Reference/get_terms), which is what does the heavy lifting in this command.
 
-### taxonomy
+
+### --order
+
+The direction to order results, either "asc" (ascending) or "desc" (descending). Default is "asc".
+
+
+### --orderby
+
+The field value to order results by, and should be used in conjunction with `--order`. Options include:
+
+* **id:** The term ID
+* **count:** The number of posts associated with this term.
+* **name:** Alphabetically by the term name.
+* **slug:** Alphabetically by the term slug.
+
+By default, results are ordered by "name".
+
+
+### --taxonomy
 
 Separate one or more taxonomies to limit results to. Separate multiple taxonomies with a comma.
 
@@ -45,6 +66,7 @@ The following will only return terms in the "post_tag" taxonomy:
 ```bash
 $ wp taxonomy-terms list --taxonomy=post_tag
 ```
+
 
 ## License
 
